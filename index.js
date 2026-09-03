@@ -408,7 +408,7 @@ client.on('interactionCreate', async interaction => {
             console.log('Impossibile inviare DM all\'utente:', e);
         }
 
-        // 2. Invia nel canale log specificato (1542488611470057516)
+        // 2. Invia nel canale log specificato
         const channel = guild.channels.cache.get(REQUESTS_CHANNEL_ID);
         if (channel) {
             const reqEmbed = new EmbedBuilder()
@@ -604,7 +604,7 @@ client.on('interactionCreate', async interaction => {
 client.on('interactionCreate', async interaction => {
     if (!interaction.isButton()) return;
 
-    const { customId, user, message, guild } = interaction;
+    const { customId, user, message } = interaction;
 
     if (customId.startsWith('approve_doc_') || customId.startsWith('deny_doc_')) {
         const parts = customId.split('_');
@@ -652,10 +652,11 @@ client.on('interactionCreate', async interaction => {
                 } catch (e) {}
             }
 
-            // Aggiorna Embed del canale log
+            // Aggiorna Embed nel canale log: aggiunge il campo "Accettato da:" e rimuove i bottoni
             const oldEmbed = EmbedBuilder.from(message.embeds[0]);
             oldEmbed.setColor('#2ECC71');
-            oldEmbed.setFooter({ text: `✅ Approvato da ${user.tag}` });
+            oldEmbed.addFields({ name: '📌 Esito Pratica', value: `✅ **Accettato da:** ${user}`, inline: false });
+            oldEmbed.setFooter({ text: `Accettato da ${user.tag}` });
 
             await message.update({ embeds: [oldEmbed], components: [] });
 
@@ -673,9 +674,11 @@ client.on('interactionCreate', async interaction => {
                 } catch (e) {}
             }
 
+            // Aggiorna Embed nel canale log: aggiunge il campo "Rifiutato da:" e rimuove i bottoni
             const oldEmbed = EmbedBuilder.from(message.embeds[0]);
             oldEmbed.setColor('#E74C3C');
-            oldEmbed.setFooter({ text: `❌ Rifiutato da ${user.tag}` });
+            oldEmbed.addFields({ name: '📌 Esito Pratica', value: `❌ **Rifiutato da:** ${user}`, inline: false });
+            oldEmbed.setFooter({ text: `Rifiutato da ${user.tag}` });
 
             await message.update({ embeds: [oldEmbed], components: [] });
         }
