@@ -1,5 +1,6 @@
 const token = process.env.DISCORD_TOKEN;
 const fs = require('fs');
+const express = require('express');
 const { 
     Client, 
     GatewayIntentBits, 
@@ -16,6 +17,18 @@ const {
     TextInputStyle,
     ChannelType
 } = require('discord.js');
+
+// --- SERVER EXPRESS PER UPTIMEROBOT & RENDER ---
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get('/', (req, res) => {
+    res.send('🤖 Bot Discord Roleplay è online e attivo!');
+});
+
+app.listen(PORT, () => {
+    console.log(`🌐 Server Web avviato sulla porta ${PORT}`);
+});
 
 // --- GESTIONE DATABASE JSON ---
 const DB_FILE = './database.json';
