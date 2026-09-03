@@ -32,8 +32,8 @@ app.listen(PORT, () => {
 
 // --- CONSTANTS & LOGO ---
 const REQUESTS_CHANNEL_ID = '1542488611470057516';
-const FORUM_ARRESTI_ID = '1533898656309051543';
-const FORUM_MULTE_ID = '1533898829903171835';
+const FORUM_ARRESTI_ID = '1545057860042358785';
+const FORUM_MULTE_ID = '1545057953269161994';
 
 const GLOBAL_LOGO = 'https://cdn.discordapp.com/attachments/1532820317112893662/1545010053935800360/ChatGPT_Image_1_set_2026_21_28_29.png?ex=6a9a963d&is=6a9944bd&hm=0de62600ef2e833f064758a4a2b79295956fcdc1589acefe47fdb7eb08d15499&';
 
@@ -457,8 +457,8 @@ client.on('interactionCreate', async interaction => {
         });
         saveDatabase(db);
 
-        const forumChannel = guild.channels.cache.get(FORUM_ARRESTI_ID);
-        if (forumChannel && forumChannel.type === ChannelType.GuildForum) {
+        const targetChannel = guild.channels.cache.get(FORUM_ARRESTI_ID);
+        if (targetChannel) {
             const arrestEmbed = new EmbedBuilder()
                 .setTitle('🚨 Verbale di Arresto Eseguito')
                 .setColor('#8B0000')
@@ -472,13 +472,17 @@ client.on('interactionCreate', async interaction => {
                 .setFooter({ text: 'Sistema Giudiziario / Polizia' })
                 .setTimestamp();
 
-            await forumChannel.threads.create({
-                name: `🚨 Arresto - ${robloxData.exactUsername}`,
-                message: { embeds: [arrestEmbed] }
-            });
+            if (targetChannel.type === ChannelType.GuildForum) {
+                await targetChannel.threads.create({
+                    name: `🚨 Arresto - ${robloxData.exactUsername}`,
+                    message: { embeds: [arrestEmbed] }
+                });
+            } else {
+                await targetChannel.send({ embeds: [arrestEmbed] });
+            }
         }
 
-        return interaction.editReply({ content: `✅ Arresto per **${robloxData.exactUsername}** salvato correttamente nel Database e inviato nel Forum!` });
+        return interaction.editReply({ content: `✅ Arresto per **${robloxData.exactUsername}** salvato correttamente nel Database e registrato nel canale!` });
     }
 
     if (customId === 'modal_multa') {
@@ -500,8 +504,8 @@ client.on('interactionCreate', async interaction => {
         });
         saveDatabase(db);
 
-        const forumChannel = guild.channels.cache.get(FORUM_MULTE_ID);
-        if (forumChannel && forumChannel.type === ChannelType.GuildForum) {
+        const targetChannel = guild.channels.cache.get(FORUM_MULTE_ID);
+        if (targetChannel) {
             const fineEmbed = new EmbedBuilder()
                 .setTitle('💶 Verbale di Sanzione Amministrativa')
                 .setColor('#E67E22')
@@ -515,13 +519,17 @@ client.on('interactionCreate', async interaction => {
                 .setFooter({ text: 'Sistema Amministrativo / Polizia' })
                 .setTimestamp();
 
-            await forumChannel.threads.create({
-                name: `💶 Multa - ${robloxData.exactUsername}`,
-                message: { embeds: [fineEmbed] }
-            });
+            if (targetChannel.type === ChannelType.GuildForum) {
+                await targetChannel.threads.create({
+                    name: `💶 Multa - ${robloxData.exactUsername}`,
+                    message: { embeds: [fineEmbed] }
+                });
+            } else {
+                await targetChannel.send({ embeds: [fineEmbed] });
+            }
         }
 
-        return interaction.editReply({ content: `✅ Multa per **${robloxData.exactUsername}** salvata correttamente nel Database e inviata nel Forum!` });
+        return interaction.editReply({ content: `✅ Multa per **${robloxData.exactUsername}** salvata correttamente nel Database e registrata nel canale!` });
     }
 
     if (customId === 'modal_permajail') {
