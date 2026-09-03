@@ -266,13 +266,11 @@ client.on('interactionCreate', async interaction => {
         return await interaction.showModal(modal);
     }
 
-    // --- COMANDO DATABASE CONSULTABILE SOLO DA DB ---
     if (commandName === 'database') {
         await interaction.deferReply();
         const queryInput = interaction.options.getString('ricerca').trim();
         const db = loadDatabase();
 
-        // 1. Cerca nei Cittadini per Nome RP o Username Roblox
         let cittadino = db.cittadini.find(c => 
             c.nome_rp.toLowerCase() === queryInput.toLowerCase() || 
             c.roblox_user.toLowerCase() === queryInput.toLowerCase()
@@ -287,7 +285,6 @@ client.on('interactionCreate', async interaction => {
 
         const targetRoblox = robloxData ? robloxData.exactUsername.toLowerCase() : robloxUsername.toLowerCase();
 
-        // Estrazione dati dal DB
         const arresti = db.arresti.filter(a => a.roblox_user.toLowerCase() === targetRoblox);
         const multe = db.multe.filter(m => m.roblox_user.toLowerCase() === targetRoblox);
         const isPermaJail = db.permajail.some(p => p.roblox_user.toLowerCase() === targetRoblox);
@@ -426,8 +423,9 @@ client.on('interactionCreate', async interaction => {
 
             reqEmbed.setFooter({ text: 'In attesa di approvazione dallo Staff' }).setTimestamp();
 
+            // ID puliti senza caratteri speciali per evitare errori
             const actions = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId(`approve_doc_${user.id}_${docType}_${encodeURIComponent(nomeRp)}_${encodeURIComponent(exactRoblox)}_${encodeURIComponent(dataNascita || 'N/D')}`).setLabel('Accetta').setStyle(ButtonStyle.Success).setEmoji('✅'),
+                new ButtonBuilder().setCustomId(`approve_doc_${user.id}_${docType}`).setLabel('Accetta').setStyle(ButtonStyle.Success).setEmoji('✅'),
                 new ButtonBuilder().setCustomId(`deny_doc_${user.id}_${docType}`).setLabel('Rifiuta').setStyle(ButtonStyle.Danger).setEmoji('❌')
             );
 
@@ -600,25 +598,32 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-// Gestione Approvazione/Rifiuto Pratiche Documenti dallo Staff
+// Gestione Approvazione/Rifiuto Pratiche Documenti dallo Staff (CORRETTO & OTTIMIZZATO)
 client.on('interactionCreate', async interaction => {
     if (!interaction.isButton()) return;
 
     const { customId, user, message } = interaction;
 
     if (customId.startsWith('approve_doc_') || customId.startsWith('deny_doc_')) {
+        // 1. Dichiara subito l'azione a Discord per evitare il timeout dei 3 secondi
+        await interaction.deferUpdate();
+
         const parts = customId.split('_');
         const isApprove = parts[0] === 'approve';
         const userId = parts[2];
         const docType = parts[3];
 
+        // Estrazione sicura dei dati direttamente dai campi dell'embed
+        const fields = message.embeds[0].fields;
+        const nomeRp = fields.find(f => f.name.includes('Nome RP'))?.value || 'N/D';
+        const robloxUser = fields.find(f => f.name.includes('Username Roblox'))?.value || 'N/D';
+        const dataNascita = fields.find(f => f.name.includes('Data di Nascita'))?.value || 'N/D';
+
         const targetUser = await client.users.fetch(userId).catch(() => null);
 
-        if (isApprove) {
-            const nomeRp = decodeURIComponent(parts[4]);
-            const robloxUser = decodeURIComponent(parts[5]);
-            const dataNascita = decodeURIComponent(parts[6]);
+        const oldEmbed = EmbedBuilder.from(message.embeds[0]);
 
+        if (isApprove) {
             // Salva nel Database
             const db = loadDatabase();
 
@@ -649,16 +654,15 @@ client.on('interactionCreate', async interaction => {
                         .setThumbnail(GLOBAL_LOGO)
                         .setTimestamp();
                     await targetUser.send({ embeds: [dmEmbed] });
-                } catch (e) {}
+                } catch (e) {
+                    console.log('Impossibile inviare DM all\'utente:', e);
+                }
             }
 
-            // Aggiorna Embed nel canale log: aggiunge il campo "Accettato da:" e rimuove i bottoni
-            const oldEmbed = EmbedBuilder.from(message.embeds[0]);
+            // Aggiorna l'Embed nel canale log
             oldEmbed.setColor('#2ECC71');
             oldEmbed.addFields({ name: '📌 Esito Pratica', value: `✅ **Accettato da:** ${user}`, inline: false });
             oldEmbed.setFooter({ text: `Accettato da ${user.tag}` });
-
-            await message.update({ embeds: [oldEmbed], components: [] });
 
         } else {
             // Se Rifiutato
@@ -671,17 +675,21 @@ client.on('interactionCreate', async interaction => {
                         .setThumbnail(GLOBAL_LOGO)
                         .setTimestamp();
                     await targetUser.send({ embeds: [dmEmbed] });
-                } catch (e) {}
+                } catch (e) {
+                    console.log('Impossibile inviare DM all\'utente:', e);
+                }
             }
 
-            // Aggiorna Embed nel canale log: aggiunge il campo "Rifiutato da:" e rimuove i bottoni
-            const oldEmbed = EmbedBuilder.from(message.embeds[0]);
             oldEmbed.setColor('#E74C3C');
             oldEmbed.addFields({ name: '📌 Esito Pratica', value: `❌ **Rifiutato da:** ${user}`, inline: false });
             oldEmbed.setFooter({ text: `Rifiutato da ${user.tag}` });
-
-            await message.update({ embeds: [oldEmbed], components: [] });
         }
+
+        // 2. Aggiorna il messaggio rimuovendo completamente i bottoni (components: [])
+        await interaction.editReply({
+            embeds: [oldEmbed],
+            components: []
+        });
     }
 });
 
